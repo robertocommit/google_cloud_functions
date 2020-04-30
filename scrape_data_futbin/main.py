@@ -2,25 +2,33 @@ from bs4 import BeautifulSoup
 import requests
 import json
 
+base_url = 'https://www.futbin.com/20/playerGraph?type=today&year=20&player='
+
 
 def extract_data(request):
 
-    print('Starting extracting url...')
-
-    params = {
-        'url': request.args.get('url')
-    }
-
-    response = requests.get(params['url'])
+    url = extract_parameter(request)
+    response = requests.get(url)
     soup = BeautifulSoup(response.text, features="html.parser")
 
-    player_id = soup.find_all('div', {'class': 'pversion'})[1].find('a')['data-resource'].replace('p', '')
+    player_id_section = soup.find_all('div', {'class': 'pversion'})[1]
+    player_id = player_id_section.find('a')['data-resource'].replace('p', '')
 
-    url_hourly = 'https://www.futbin.com/20/playerGraph?type=today&year=20&player=' + str(player_id)
+    url_hourly = base_url + str(player_id)
 
     response_hourly = requests.get(url_hourly)
-    soup_hourly = BeautifulSoup(response_hourly.text, features="html.parser")
-
-    print('Done')
+    soup_hourly = BeautifulSoup(
+        response_hourly.text,
+        features="html.parser")
 
     return json.dumps(soup_hourly.getText())
+
+
+def extract_parameter(request):
+    request_json = request.get_json(silent=True)
+    request_args = request.args
+    if request_json and 'url' in request_json:
+        url = request_json['url']
+    elif request_args and 'url' in request_args:
+        url = request_args['url']
+    return url
